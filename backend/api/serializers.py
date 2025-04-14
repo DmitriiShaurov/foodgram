@@ -64,7 +64,10 @@ class UserSerializer(serializers.ModelSerializer):
         """Check if a user is subscribed."""
         request = self.context.get('request')
         if request and request.user.is_authenticated:
-            return Subscription.objects.filter(user=request.user, author=obj).exists()
+            return Subscription.objects.filter(
+                user=request.user,
+                author=obj
+            ).exists()
         return False
 
 
@@ -137,9 +140,13 @@ class Base64ImageField(serializers.Field):
 
                 return data
             except Exception as e:
-                raise serializers.ValidationError(f'Invalid image format: {str(e)}')
+                raise serializers.ValidationError(
+                    f'Invalid image format: {str(e)}'
+                )
 
-        raise serializers.ValidationError('Invalid image format, base64 line is expected.')
+        raise serializers.ValidationError(
+            'Invalid image format, base64 line is expected.'
+        )
 
     def to_representation(self, value):
         """Returns image URL."""
@@ -197,9 +204,13 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
         """Validates fields."""
         if self.instance:
             if 'ingredients' not in data:
-                raise serializers.ValidationError({'ingredients': 'This fields is required.'})
+                raise serializers.ValidationError(
+                    {'ingredients': 'This fields is required.'}
+                )
             if 'tags' not in data:
-                raise serializers.ValidationError({'tags': 'This fields is required'})
+                raise serializers.ValidationError(
+                    {'tags': 'This fields is required'}
+                )
 
         return data
 
@@ -207,32 +218,48 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
         """Validates Recipe name."""
         if not self.instance:
             if Recipe.objects.filter(name=value).exists():
-                raise serializers.ValidationError('The recipe with such name already exists.')
+                raise serializers.ValidationError(
+                    'The recipe with such name already exists.'
+                )
 
         else:
-            if Recipe.objects.filter(name=value).exclude(id=self.instance.id).exists():
-                raise serializers.ValidationError('The recipe with such name already exists.')
+            if Recipe.objects.filter(
+                    name=value
+            ).exclude(
+                id=self.instance.id
+            ).exists():
+                raise serializers.ValidationError(
+                    'The recipe with such name already exists.'
+                )
         return value
 
     def validate_ingredients(self, value):
         """Validates Ingredients."""
         if not value:
-            raise serializers.ValidationError('At least one ingredient must be specified.')
+            raise serializers.ValidationError(
+                'At least one ingredient must be specified.'
+            )
 
         ingredient_ids = [item['id'].id for item in value]
         if len(ingredient_ids) != len(set(ingredient_ids)):
-            raise serializers.ValidationError('Ingredients should not be repeated.')
+            raise serializers.ValidationError(
+                'Ingredients should not be repeated.'
+            )
 
         return value
 
     def validate_tags(self, value):
         """Validates tags"""
         if not value:
-            raise serializers.ValidationError('At least one tag must be specified')
+            raise serializers.ValidationError(
+                'At least one tag must be specified'
+            )
 
         tag_ids = [tag.id for tag in value]
         if len(tag_ids) != len(set(tag_ids)):
-            raise serializers.ValidationError('Tags should not be repeated.')
+            raise serializers.ValidationError(
+                'Tags should not be repeated.'
+            )
 
         return value
 
@@ -294,7 +321,9 @@ class RecipeIngredientReadSerializer(serializers.ModelSerializer):
     """Serializer for reading ingredient information in recipes."""
     id = serializers.ReadOnlyField(source='ingredient.id')
     name = serializers.ReadOnlyField(source='ingredient.name')
-    measurement_unit = serializers.ReadOnlyField(source='ingredient.measurement_unit')
+    measurement_unit = serializers.ReadOnlyField(
+        source='ingredient.measurement_unit'
+    )
 
     class Meta:
         model = RecipeIngredient
@@ -434,7 +463,10 @@ class SubscriptionSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         follower = self.context['request'].user
         author = self.context['author']
-        subscription = Subscription.objects.create(user=follower, author=author)
+        subscription = Subscription.objects.create(
+            user=follower,
+            author=author
+        )
         return subscription
 
     def get_avatar(self, obj):

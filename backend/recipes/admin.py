@@ -17,4 +17,3 @@ admin.site.register(RecipeIngredient)
 admin.site.register(FavoriteRecipe)
 admin.site.register(ShoppingCart)
 admin.site.register(ShortLink)
-

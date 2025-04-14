@@ -76,7 +76,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
 class GetRecipeLinkView(views.APIView):
     """View to get a recipe short link."""
 
-
     def get(self, request, id):
         """Gets a recipe short link."""
         recipe = get_object_or_404(Recipe, id=id)
@@ -136,8 +135,12 @@ class DownloadShoppingCartView(views.APIView):
             content.append(line)
 
         # Return HTTP response with a TXT file
-        response = HttpResponse(''.join(content), content_type='text/plain; charset=utf-8')
-        response['Content-Disposition'] = 'attachment; filename="shopping_list.txt"'
+        response = HttpResponse(
+            ''.join(content),
+            content_type='text/plain; charset=utf-8'
+        )
+        response['Content-Disposition'] = \
+            'attachment; filename="shopping_list.txt"'
 
         return response
 
@@ -190,7 +193,6 @@ class UserMeAvatarView(views.APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-
         old_avatar_path = user.avatar.path
         user.avatar = None
         user.save()
@@ -220,7 +222,10 @@ class SubscribeView(views.APIView):
         follower = request.user
         following = get_object_or_404(UserDetail, id=id)
 
-        subscription = Subscription.objects.filter(user=follower, author=following)
+        subscription = Subscription.objects.filter(
+            user=follower,
+            author=following
+        )
         if not subscription.exists():
             return Response(
                 {'detail': 'You are no subscribed for this user.'},
@@ -251,7 +256,10 @@ class FavoriteRecipeView(views.APIView):
         user = request.user
         recipe = get_object_or_404(Recipe, id=id)
 
-        favorite, created = FavoriteRecipe.objects.get_or_create(user=user, recipe=recipe)
+        favorite, created = FavoriteRecipe.objects.get_or_create(
+            user=user,
+            recipe=recipe
+        )
         if not created:
             return Response(
                 {'detail': 'The recipe is already in a favorite list'},

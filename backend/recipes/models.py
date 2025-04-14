@@ -8,7 +8,11 @@ from users.models import UserDetail
 
 
 class Ingredient(models.Model):
-    """Model representing a recipe ingredient with name and measurement unit."""
+    """
+    Model representing a recipe ingredient
+    with name and measurement unit.
+    """
+
     name = models.CharField(
         verbose_name='Название',
         unique=True,
@@ -50,7 +54,11 @@ class Tag(models.Model):
 
 
 class Recipe(models.Model):
-    """Model representing a cooking recipe with ingredients and preparation details."""
+    """
+    Model representing a cooking recipe
+    with ingredients and preparation details.
+    """
+
     author = models.ForeignKey(
         UserDetail,
         on_delete=models.CASCADE,
@@ -72,7 +80,10 @@ class Recipe(models.Model):
         null=True,
         default=None
     )
-    text = models.TextField(verbose_name='Описание', max_length=settings.RECIPE_TEXT_MAX_LENGTH)
+    text = models.TextField(
+        verbose_name='Описание',
+        max_length=settings.RECIPE_TEXT_MAX_LENGTH
+    )
     ingredients = models.ManyToManyField(
         Ingredient,
         through='RecipeIngredient',
@@ -99,7 +110,11 @@ class Recipe(models.Model):
 
 
 class RecipeIngredient(models.Model):
-    """Junction model linking recipes with ingredients and their quantities."""
+    """
+    Model linking recipes with
+    ingredients and their quantities.
+    """
+
     recipe = models.ForeignKey(
         Recipe,
         on_delete=models.CASCADE,
@@ -123,11 +138,15 @@ class RecipeIngredient(models.Model):
         ]
 
     def __str__(self):
-        return f'{self.ingredient.name} ({self.amount} {self.ingredient.measurement_unit})'
+        return (
+            f'{self.ingredient.name} ({self.amount} '
+            f'{self.ingredient.measurement_unit})'
+        )
 
 
 class FavoriteRecipe(models.Model):
     """Model for tracking users' favorite recipes."""
+
     user = models.ForeignKey(
         UserDetail,
         on_delete=models.CASCADE,
@@ -157,6 +176,7 @@ class FavoriteRecipe(models.Model):
 
 class ShoppingCart(models.Model):
     """Model for tracking recipes added to users' shopping carts."""
+
     user = models.ForeignKey(
         UserDetail,
         on_delete=models.CASCADE,
@@ -186,6 +206,7 @@ class ShoppingCart(models.Model):
 
 class ShortLink(models.Model):
     """Model for storing shortened URLs for recipes."""
+
     recipe = models.ForeignKey(
         Recipe,
         on_delete=models.CASCADE,

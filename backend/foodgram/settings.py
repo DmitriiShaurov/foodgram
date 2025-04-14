@@ -4,12 +4,10 @@ from pathlib import Path
 from django.core.management.utils import get_random_secret_key
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-BASE_URL = os.environ.get('BASE_URL',)
+BASE_URL = os.environ.get('BASE_URL', )
 SECRET_KEY = os.environ.get('SECRET_KEY', get_random_secret_key())
 DEBUG = os.environ.get('DJANGO_DEBUG_ENABLED', False) == 'True'
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
-
-
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -97,7 +95,6 @@ STATIC_URL = '/static/'
 STATIC_ROOT = '/backend_static/static/'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = '/media/'
-
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

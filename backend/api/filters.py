@@ -4,6 +4,7 @@ from django_filters import rest_framework as filters
 from recipes.models import Ingredient, Recipe, Tag
 from users.models import UserDetail
 
+
 class IngredientFilter(FilterSet):
     """
     Custom filter for Ingredient model that allows filtering by
@@ -19,6 +20,7 @@ class IngredientFilter(FilterSet):
         fields = (
             'name',
         )
+
 
 class RecipeFilter(FilterSet):
     """
