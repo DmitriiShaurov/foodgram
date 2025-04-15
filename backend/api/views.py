@@ -6,6 +6,7 @@ from django.db.models import Sum
 from django.http import HttpResponse, HttpResponseRedirect
 from rest_framework.response import Response
 from rest_framework.decorators import action
+from django.conf import settings
 
 from .filters import IngredientFilter, RecipeFilter
 from .pagination import CustomPagination
@@ -78,8 +79,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def get_short_link(self, request, pk=None):
         """Gets a short link for a recipe."""
         recipe = self.get_object()
-        short_link = request.build_absolute_uri(
-            f'/r/{recipe.short_link_token}/'
+        short_link = (
+            f'{settings.BASE_URL}/r'
+            f'/{recipe.short_link_token}/'
         )
 
         return Response(
@@ -305,6 +307,6 @@ class ShortLinkRedirectView(views.View):
             short_link_token=token
         )
 
-        redirect_url = request.build_absolute_uri(f'/recipes/{recipe.id}/')
+        redirect_url = f'{settings.BASE_URL}/recipes/{recipe.id}/'
 
         return HttpResponseRedirect(redirect_url)
