@@ -8,7 +8,6 @@ class User(AbstractUser):
     Custom user model with extended profile information and avatar support.
     """
     email = models.EmailField(
-        max_length=settings.USER_EMAIL_MAX_LENGTH,
         unique=True,
         verbose_name='Электронная почта'
     )

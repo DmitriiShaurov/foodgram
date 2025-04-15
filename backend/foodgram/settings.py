@@ -110,16 +110,15 @@ DJOSER = {
     'HIDE_USERS': False,
     'PERMISSIONS': {
         "user_list": ["rest_framework.permissions.AllowAny"],
+        "user": ["rest_framework.permissions.AllowAny"],
     },
     'SERIALIZERS': {
-        'user': 'users.serializers.CustomUserSerializer',
-        'current_user': 'users.serializers.CustomUserSerializer',
-
+        'user': 'api.serializers.CustomUserSerializer',
+        'current_user': 'api.serializers.CustomUserSerializer',
     },
 }
 
 # Users settings
-USER_EMAIL_MAX_LENGTH = 254
 USER_FIRST_NAME_MAX_LENGTH = 150
 USER_LAST_NAME_MAX_LENGTH = 150
 

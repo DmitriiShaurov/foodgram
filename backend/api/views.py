@@ -103,7 +103,7 @@ class DownloadShoppingCartView(views.APIView):
         recipes_in_cart = Recipe.objects.filter(in_shopping_cart__user=user)
         if not recipes_in_cart.exists():
             return Response(
-                {"detail": "There are no recipes in a shopping cart"},
+                {'detail': 'There are no recipes in a shopping cart'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -151,9 +151,9 @@ class UserViewSet(DjoserUserViewSet):
 
     @action(
         detail=False,
-        methods=["get"],
+        methods=['get'],
         permission_classes=[
-            permissions.IsAuthenticated(),
+            permissions.IsAuthenticated,
         ]
     )
     def me(self, request):
@@ -162,6 +162,7 @@ class UserViewSet(DjoserUserViewSet):
 
 class UserMeAvatarView(views.APIView):
     """View to update or delete the user's avatar."""
+
     permission_classes = (permissions.IsAuthenticated,)
 
     def put(self, request):
@@ -192,6 +193,7 @@ class UserMeAvatarView(views.APIView):
 
 class SubscribeView(views.APIView):
     """View to add or remove a user from a subscription list."""
+
     permission_classes = (permissions.IsAuthenticated,)
 
     def post(self, request, id):
@@ -223,16 +225,18 @@ class SubscribeView(views.APIView):
 
 class SubscriptionsListView(generics.ListAPIView):
     """View to get current user subscriptions."""
+
     serializer_class = SubscriptionSerializer
     permission_classes = (permissions.IsAuthenticated,)
-    pagination_class = CustomPagination
 
     def get_queryset(self):
-        return Subscription.objects.filter(user=self.request.user)
+        return User.objects.filter(
+            following__user=self.request.user)
 
 
 class FavoriteRecipeView(views.APIView):
     """View to add or delete a recipe from a favorite list."""
+
     permission_classes = (permissions.IsAuthenticated,)
 
     def post(self, request, id):
@@ -266,7 +270,8 @@ class FavoriteRecipeView(views.APIView):
 
 class ShoppingCartView(views.APIView):
     """View to add/delete recipes to a shopping cart."""
-    permission_classes = [permissions.IsAuthenticated]
+
+    permission_classes = (permissions.IsAuthenticated,)
 
     def post(self, request, id):
         """Add a recipe to a shopping cart."""

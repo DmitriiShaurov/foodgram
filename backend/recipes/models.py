@@ -134,10 +134,17 @@ class Recipe(models.Model):
     def generate_short_link_token(self):
         """Generates a unique token for the short link."""
         chars = string.ascii_letters + string.digits
-        return ''.join(
-            random.choice(chars)
-            for _ in range(settings.SHORTLINK_SIZE)
-        )
+
+        while True:
+            token = ''.join(
+                random.choice(chars)
+                for _ in range(settings.SHORTLINK_SIZE)
+            )
+
+            if not Recipe.objects.filter(
+                    short_link_token=token
+            ).exists():
+                return token
 
     def save(self, *args, **kwargs):
         """Override save to generate short link token if it doesn't exist."""
