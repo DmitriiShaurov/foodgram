@@ -16,63 +16,6 @@ from recipes.models import (
 )
 
 
-class IngredientSerializer(serializers.ModelSerializer):
-    """Serializer for Ingredient model instances"""
-
-    class Meta:
-        model = Ingredient
-        fields = (
-            'id',
-            'name',
-            'measurement_unit',
-        )
-
-
-class TagSerializer(serializers.ModelSerializer):
-    """Serializer for Tag model instances"""
-
-    class Meta:
-        model = Tag
-        fields = (
-            'id',
-            'name',
-            'slug',
-        )
-
-
-class UserSerializer(serializers.ModelSerializer):
-    """Serializer for User model instances"""
-
-    is_subscribed = serializers.SerializerMethodField()
-
-    class Meta:
-        model = User
-        fields = (
-            'id',
-            'first_name',
-            'last_name',
-            'username',
-            'email',
-            'is_subscribed',
-            'avatar',
-            'password',
-        )
-
-        extra_kwargs = {'password': {'write_only': True}}
-
-    def get_is_subscribed(self, obj):
-        """Check if a recipe is favorited."""
-        request = self.context.get('request')
-        return bool(
-            request
-            and request.user.is_authenticated
-            and Subscription.objects.filter(
-                user=request.user,
-                author=obj
-            ).exists()
-        )
-
-
 class Base64ImageField(serializers.Field):
     """Custom field for handling base64-encoded images."""
 
@@ -109,6 +52,64 @@ class Base64ImageField(serializers.Field):
         if value and hasattr(value, 'url'):
             return value.url
         return None
+
+
+class IngredientSerializer(serializers.ModelSerializer):
+    """Serializer for Ingredient model instances"""
+
+    class Meta:
+        model = Ingredient
+        fields = (
+            'id',
+            'name',
+            'measurement_unit',
+        )
+
+
+class TagSerializer(serializers.ModelSerializer):
+    """Serializer for Tag model instances"""
+
+    class Meta:
+        model = Tag
+        fields = (
+            'id',
+            'name',
+            'slug',
+        )
+
+
+class UserSerializer(serializers.ModelSerializer):
+    """Serializer for User model instances"""
+
+    is_subscribed = serializers.SerializerMethodField()
+    avatar = Base64ImageField(read_only=True)
+
+    class Meta:
+        model = User
+        fields = (
+            'id',
+            'first_name',
+            'last_name',
+            'username',
+            'email',
+            'is_subscribed',
+            'avatar',
+            'password',
+        )
+
+        extra_kwargs = {'password': {'write_only': True}}
+
+    def get_is_subscribed(self, obj):
+        """Check if a recipe is favorited."""
+        request = self.context.get('request')
+        return bool(
+            request
+            and request.user.is_authenticated
+            and Subscription.objects.filter(
+                user=request.user,
+                author=obj
+            ).exists()
+        )
 
 
 class UserMeAvatarSerializer(serializers.ModelSerializer):
