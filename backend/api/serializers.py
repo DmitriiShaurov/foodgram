@@ -4,6 +4,7 @@ import uuid
 from django.db import transaction
 from django.core.files.base import ContentFile
 from rest_framework import serializers
+from django.conf import settings
 
 from users.models import User, Subscription
 from recipes.models import (
@@ -428,10 +429,8 @@ class SubscriptionSerializer(serializers.ModelSerializer):
     def get_avatar(self, obj):
         author = obj.author
         if hasattr(author, 'avatar') and author.avatar:
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(author.avatar.url)
-            return author.avatar.url
+            return f'{settings.BASE_URL}/{author.avatar.url}'
+
         return None
 
     def get_recipes(self, obj):
