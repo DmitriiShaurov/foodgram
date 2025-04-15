@@ -1,11 +1,11 @@
-import os
-
+from djoser.views import UserViewSet as DjoserUserViewSet
 from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, views, generics, permissions, status
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Sum
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseRedirect
 from rest_framework.response import Response
+from rest_framework.decorators import action
 
 from .filters import IngredientFilter, RecipeFilter
 from .pagination import CustomPagination
@@ -16,23 +16,21 @@ from recipes.models import (
     Tag,
     FavoriteRecipe,
     ShoppingCart,
-    ShortLink,
-    RecipeIngredient
+    RecipeIngredient,
 )
 from .serializers import (
     IngredientSerializer,
     TagSerializer,
-    UserSerializer,
-    UserCreateSerializer,
-    UserMeSerializer,
     UserMeAvatarSerializer,
     RecipeCreateUpdateSerializer,
     RecipeReadSerializer,
+    ShoppingCartSerializer,
+    FavoriteRecipeSerializer,
     SubscriptionSerializer,
-    RecipeShortSerializer
+    SubscriptionCreateSerializer,
 )
 
-from users.models import UserDetail, Subscription
+from users.models import User, Subscription
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
@@ -72,22 +70,20 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
-
-class GetRecipeLinkView(views.APIView):
-    """View to get a recipe short link."""
-
-    def get(self, request, id):
-        """Gets a recipe short link."""
-        recipe = get_object_or_404(Recipe, id=id)
-        short_link = ShortLink.objects.filter(recipe=recipe).first()
-
-        # Check if a short link already exists
-        if not short_link:
-            token = ShortLink.generate_token()
-            short_link = ShortLink.objects.create(recipe=recipe, token=token)
+    @action(
+        detail=True,
+        methods=['get'],
+        url_path='get-link'
+    )
+    def get_short_link(self, request, pk=None):
+        """Gets a short link for a recipe."""
+        recipe = self.get_object()
+        short_link = request.build_absolute_uri(
+            f'/r/{recipe.short_link_token}/'
+        )
 
         return Response(
-            {"short-link": short_link.get_absolute_url()},
+            {'short-link': short_link},
             status=status.HTTP_200_OK
         )
 
@@ -145,28 +141,21 @@ class DownloadShoppingCartView(views.APIView):
         return response
 
 
-class UserViewSet(viewsets.ModelViewSet):
+class UserViewSet(DjoserUserViewSet):
     """
-    ViewSet for the UserDetail model.
+    ViewSet for the User model,
+    extending Djoser UserViewSet.
     """
-    queryset = UserDetail.objects.all()
-    pagination_class = CustomPagination
 
-    def get_serializer_class(self):
-        """Returns a serializer depending on an action."""
-        if self.action == 'create':
-            return UserCreateSerializer
-        return UserSerializer
-
-
-class UserMeView(views.APIView):
-    """View to retrieve information about yourself."""
-    permission_classes = (permissions.IsAuthenticated,)
-
-    def get(self, request, *args, **kwargs):
-        """Retrieve the current user's profile information."""
-        serializer = UserMeSerializer(request.user)
-        return Response(serializer.data)
+    @action(
+        detail=False,
+        methods=["get"],
+        permission_classes=[
+            permissions.IsAuthenticated(),
+        ]
+    )
+    def me(self, request):
+        return super().me(request)
 
 
 class UserMeAvatarView(views.APIView):
@@ -193,13 +182,8 @@ class UserMeAvatarView(views.APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        old_avatar_path = user.avatar.path
-        user.avatar = None
+        user.avatar.delete()
         user.save()
-
-        # Remove avatar from disk
-        if os.path.exists(old_avatar_path):
-            os.remove(old_avatar_path)
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -209,10 +193,10 @@ class SubscribeView(views.APIView):
     permission_classes = (permissions.IsAuthenticated,)
 
     def post(self, request, id):
-        author = get_object_or_404(UserDetail, id=id)
-        serializer = SubscriptionSerializer(
-            data={},
-            context={'request': request, 'author': author}
+        author = get_object_or_404(User, id=id)
+        serializer = SubscriptionCreateSerializer(
+            data={'author': author.id},
+            context={'request': request}
         )
         serializer.is_valid(raise_exception=True)
         serializer.save()
@@ -220,24 +204,23 @@ class SubscribeView(views.APIView):
 
     def delete(self, request, id):
         follower = request.user
-        following = get_object_or_404(UserDetail, id=id)
+        following = get_object_or_404(User, id=id)
 
-        subscription = Subscription.objects.filter(
+        deleted_count, _ = Subscription.objects.filter(
             user=follower,
             author=following
-        )
-        if not subscription.exists():
+        ).delete()
+
+        if not deleted_count:
             return Response(
-                {'detail': 'You are no subscribed for this user.'},
+                {'detail': 'You are not subscribed to this user.'},
                 status=status.HTTP_400_BAD_REQUEST)
 
-        subscription.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class SubscriptionsListView(generics.ListAPIView):
     """View to get current user subscriptions."""
-
     serializer_class = SubscriptionSerializer
     permission_classes = (permissions.IsAuthenticated,)
     pagination_class = CustomPagination
@@ -248,85 +231,80 @@ class SubscriptionsListView(generics.ListAPIView):
 
 class FavoriteRecipeView(views.APIView):
     """View to add or delete a recipe from a favorite list."""
-
     permission_classes = (permissions.IsAuthenticated,)
 
     def post(self, request, id):
-        """Add a recipe to a favorite list"""
-        user = request.user
+        """Add a recipe to a favorite list."""
         recipe = get_object_or_404(Recipe, id=id)
-
-        favorite, created = FavoriteRecipe.objects.get_or_create(
-            user=user,
-            recipe=recipe
+        serializer = FavoriteRecipeSerializer(
+            data={'recipe': recipe.id},
+            context={'request': request}
         )
-        if not created:
-            return Response(
-                {'detail': 'The recipe is already in a favorite list'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        serializer = RecipeShortSerializer(recipe)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def delete(self, request, id):
-        """Delete a recipe to a favorite list."""
+        """Delete a recipe from a favorite list."""
         user = request.user
         recipe = get_object_or_404(Recipe, id=id)
 
-        favorite_recipe = FavoriteRecipe.objects.filter(
+        deleted_count, _ = FavoriteRecipe.objects.filter(
             user=user,
             recipe=recipe
-        )
-        if not favorite_recipe.exists():
-            return Response(
-                {'detail': 'The recipe is not in a favorite list'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        ).delete()
 
-        favorite_recipe.delete()
+        if not deleted_count:
+            return Response(
+                {'detail': 'The recipe is not in your favorites.'},
+                status=status.HTTP_400_BAD_REQUEST)
+
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class ShoppingCartView(views.APIView):
     """View to add/delete recipes to a shopping cart."""
-
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, id):
         """Add a recipe to a shopping cart."""
         recipe = get_object_or_404(Recipe, id=id)
-        user = request.user
-
-        # Check if a recipe is already in a shopping cart
-        if ShoppingCart.objects.filter(user=user, recipe=recipe).exists():
-            return Response(
-                {'errors': 'The recipe is already in a shopping cart.'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        # Add a recipe to a shopping cart
-        ShoppingCart.objects.create(user=user, recipe=recipe)
-        serializer = RecipeShortSerializer(recipe)
-        return Response(
-            serializer.data,
-            status=status.HTTP_201_CREATED
+        serializer = ShoppingCartSerializer(
+            data={'recipe': recipe.id},
+            context={'request': request}
         )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def delete(self, request, id):
         """Delete a recipe from a shopping cart."""
         user = request.user
-        recipe = get_object_or_404(
-            Recipe,
-            id=id
-        )
-        shopping_cart_item = ShoppingCart.objects.filter(
+        recipe = get_object_or_404(Recipe, id=id)
+
+        deleted_count, _ = ShoppingCart.objects.filter(
             user=user,
             recipe=recipe
+        ).delete()
+
+        if not deleted_count:
+            return Response(
+                {'detail': 'The recipe is not in your shopping cart.'},
+                status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ShortLinkRedirectView(views.View):
+    """Redirects from a short link to a recipe page."""
+
+    def get(self, request, token):
+        """Redirects to a recipe page."""
+        recipe = get_object_or_404(
+            Recipe,
+            short_link_token=token
         )
 
-        if not shopping_cart_item.exists():
-            return Response(status=status.HTTP_400_BAD_REQUEST)
+        redirect_url = request.build_absolute_uri(f'/recipes/{recipe.id}/')
 
-        shopping_cart_item.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return HttpResponseRedirect(redirect_url)

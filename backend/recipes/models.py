@@ -1,10 +1,11 @@
-import uuid
+import string
+import random
 
 from django.conf import settings
-from django.core.validators import MinValueValidator
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 
-from users.models import UserDetail
+from users.models import User
 
 
 class Ingredient(models.Model):
@@ -16,20 +17,26 @@ class Ingredient(models.Model):
     name = models.CharField(
         verbose_name='Название',
         unique=True,
-        max_length=settings.INGREDIENTS_NAME_MAX_LENGTH
+        max_length=settings.INGREDIENT_NAME_MAX_LENGTH
     )
     measurement_unit = models.CharField(
         verbose_name='Единица измерения',
-        max_length=settings.INGREDIENTS_MEASUREMENT_UNIT_MAX_LENGTH
+        max_length=settings.INGREDIENT_MEASUREMENT_UNIT_MAX_LENGTH
     )
 
     class Meta:
         verbose_name = 'Ингредиент'
         verbose_name_plural = 'Ингредиенты'
         ordering = ('name',)
+        constraints = [
+            models.UniqueConstraint(
+                fields=('name', 'measurement_unit'),
+                name='unique_ingredient'
+            )
+        ]
 
     def __str__(self):
-        return self.name
+        return f'Ингредиент "{self.name}" ({self.measurement_unit})'
 
 
 class Tag(models.Model):
@@ -50,7 +57,7 @@ class Tag(models.Model):
         ordering = ('name',)
 
     def __str__(self):
-        return self.name
+        return f'Тэг "{self.name}" (slug: {self.slug})'
 
 
 class Recipe(models.Model):
@@ -60,7 +67,7 @@ class Recipe(models.Model):
     """
 
     author = models.ForeignKey(
-        UserDetail,
+        User,
         on_delete=models.CASCADE,
         related_name='recipes',
         verbose_name='Автор'
@@ -82,7 +89,6 @@ class Recipe(models.Model):
     )
     text = models.TextField(
         verbose_name='Описание',
-        max_length=settings.RECIPE_TEXT_MAX_LENGTH
     )
     ingredients = models.ManyToManyField(
         Ingredient,
@@ -93,11 +99,28 @@ class Recipe(models.Model):
         Tag,
         verbose_name='Теги'
     )
-    cooking_time = models.IntegerField(
+    cooking_time = models.PositiveSmallIntegerField(
         validators=(
-            MinValueValidator(settings.RECIPE_MIN_COOKING_TIME),
+            MinValueValidator(
+                settings.RECIPE_MIN_COOKING_TIME,
+                message='Время готовки не может быть менее '
+                        f'{settings.RECIPE_MIN_COOKING_TIME} мин'
+            ),
+            MaxValueValidator(
+                settings.RECIPE_MAX_COOKING_TIME,
+                message='Время готовки не может быть более '
+                        f'{settings.RECIPE_MAX_COOKING_TIME} мин'
+            ),
         ),
         verbose_name='Время приготовления в минутах'
+    )
+
+    short_link_token = models.CharField(
+        verbose_name='Токен короткой ссылки',
+        max_length=settings.SHORTLINK_SIZE,
+        unique=True,
+        null=True,
+        blank=True,
     )
 
     class Meta:
@@ -106,7 +129,22 @@ class Recipe(models.Model):
         ordering = ('-pub_date',)
 
     def __str__(self):
-        return self.name
+        return f'Рецепт "{self.name}" от {self.author.username}'
+
+    def generate_short_link_token(self):
+        """Generates a unique token for the short link."""
+        chars = string.ascii_letters + string.digits
+        return ''.join(
+            random.choice(chars)
+            for _ in range(settings.SHORTLINK_SIZE)
+        )
+
+    def save(self, *args, **kwargs):
+        """Override save to generate short link token if it doesn't exist."""
+        if not self.short_link_token:
+            self.short_link_token = self.generate_short_link_token()
+
+        super().save(*args, **kwargs)
 
 
 class RecipeIngredient(models.Model):
@@ -125,7 +163,20 @@ class RecipeIngredient(models.Model):
         on_delete=models.CASCADE,
         verbose_name='Ингредиент'
     )
-    amount = models.FloatField(verbose_name='Количество')
+    amount = models.PositiveSmallIntegerField(
+        validators=(
+            MinValueValidator(
+                settings.INGREDIENT_MIN_AMOUNT,
+                message='Количество ингредиента не может быть меньше '
+                        f'{settings.INGREDIENT_MIN_AMOUNT}'
+            ),
+            MaxValueValidator(
+                settings.INGREDIENT_MAX_AMOUNT,
+                message='Количество ингредиента не может быть больше '
+                        f'{settings.INGREDIENT_MAX_AMOUNT}'
+            ),
+        )
+    )
 
     class Meta:
         verbose_name = 'Ингредиент в рецепте'
@@ -138,17 +189,16 @@ class RecipeIngredient(models.Model):
         ]
 
     def __str__(self):
-        return (
-            f'{self.ingredient.name} ({self.amount} '
-            f'{self.ingredient.measurement_unit})'
-        )
+        return (f'{self.ingredient.name} ({self.amount} '
+                f'{self.ingredient.measurement_unit}) '
+                f'для "{self.recipe.name}"')
 
 
 class FavoriteRecipe(models.Model):
     """Model for tracking users' favorite recipes."""
 
     user = models.ForeignKey(
-        UserDetail,
+        User,
         on_delete=models.CASCADE,
         related_name='favorites',
         verbose_name='Пользователь'
@@ -171,14 +221,14 @@ class FavoriteRecipe(models.Model):
         ]
 
     def __str__(self):
-        return f'{self.user.username} - {self.recipe.name}'
+        return f'Избранное: "{self.recipe.name}" для {self.user.username}'
 
 
 class ShoppingCart(models.Model):
     """Model for tracking recipes added to users' shopping carts."""
 
     user = models.ForeignKey(
-        UserDetail,
+        User,
         on_delete=models.CASCADE,
         related_name='shopping_cart',
         verbose_name='Пользователь'
@@ -201,42 +251,4 @@ class ShoppingCart(models.Model):
         ]
 
     def __str__(self):
-        return f'{self.user.username} - {self.recipe.name}'
-
-
-class ShortLink(models.Model):
-    """Model for storing shortened URLs for recipes."""
-
-    recipe = models.ForeignKey(
-        Recipe,
-        on_delete=models.CASCADE,
-        related_name='short_links',
-        verbose_name='Рецепт'
-    )
-    token = models.CharField(
-        max_length=settings.SHORTLINK_SIZE,
-        unique=True,
-        db_index=True,
-        verbose_name='Токен'
-    )
-    created_at = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name='Дата создания'
-    )
-
-    class Meta:
-        verbose_name = 'Короткая ссылка'
-        verbose_name_plural = 'Короткие ссылки'
-        ordering = ('-created_at',)
-
-    @classmethod
-    def generate_token(cls):
-        """Generate a unique token for the short link."""
-        return uuid.uuid4().hex[:settings.SHORTLINK_SIZE]
-
-    def get_absolute_url(self):
-        """Return the complete URL for the short link."""
-        return f'{settings.BASE_URL}/r/{self.token}/'
-
-    def __str__(self):
-        return f'Короткая ссылка на {self.recipe.name} ({self.token})'
+        return f'{self.user.username} добавил "{self.recipe.name}" в корзину'

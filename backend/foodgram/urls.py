@@ -3,7 +3,7 @@ from django.urls import include, path
 from django.conf import settings
 from django.conf.urls.static import static
 
-from recipes.views import ShortLinkRedirectView
+from api.views import ShortLinkRedirectView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -11,8 +11,9 @@ urlpatterns = [
     path(
         'r/<str:token>/',
         ShortLinkRedirectView.as_view(),
-        name='short_link'
+        name='short-link-redirect'
     ),
+
 ]
 
 if settings.DEBUG:

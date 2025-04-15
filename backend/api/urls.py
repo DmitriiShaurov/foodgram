@@ -1,18 +1,16 @@
 from django.urls import path, include
 from rest_framework import routers
-from djoser.views import UserViewSet as DjoserUserViewSet
+
 from .views import (
     IngredientViewSet,
     RecipeViewSet,
     ShoppingCartView,
     TagViewSet,
     UserViewSet,
-    UserMeView,
     UserMeAvatarView,
     SubscriptionsListView,
     SubscribeView,
     FavoriteRecipeView,
-    GetRecipeLinkView,
     DownloadShoppingCartView
 )
 
@@ -39,18 +37,9 @@ router_v1.register(
 
 urlpatterns = [
     path(
-        'users/set_password/',
-        DjoserUserViewSet.as_view({'post': 'set_password'})
-    ),
-    path(
         'users/me/avatar/',
         UserMeAvatarView.as_view(),
         name='avatar'
-    ),
-    path(
-        'users/me/',
-        UserMeView.as_view(),
-        name='me'
     ),
     path(
         'users/subscriptions/',
@@ -73,18 +62,11 @@ urlpatterns = [
         name='shopping_cart'
     ),
     path(
-        'recipes/<int:id>/get-link/',
-        GetRecipeLinkView.as_view(),
-        name='get-recipe-link'
-    ),
-    path(
         'recipes/download_shopping_cart/',
         DownloadShoppingCartView.as_view(),
         name='download-shopping-cart'
     ),
-    path(
-        'auth/',
-        include('djoser.urls.authtoken')
-    ),
+    path('', include('djoser.urls')),
+    path('auth/', include('djoser.urls.authtoken')),
     path('', include(router_v1.urls)),
 ]

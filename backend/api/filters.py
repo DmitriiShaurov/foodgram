@@ -2,7 +2,7 @@ from django_filters.rest_framework import FilterSet, CharFilter
 from django_filters import rest_framework as filters
 
 from recipes.models import Ingredient, Recipe, Tag
-from users.models import UserDetail
+from users.models import User
 
 
 class IngredientFilter(FilterSet):
@@ -33,7 +33,7 @@ class RecipeFilter(FilterSet):
         queryset=Tag.objects.all(),
     )
     author = filters.ModelChoiceFilter(
-        queryset=UserDetail.objects.all(),
+        queryset=User.objects.all(),
     )
     is_favorited = filters.BooleanFilter(
         method='filter_is_favorited',

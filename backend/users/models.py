@@ -1,38 +1,23 @@
 from django.contrib.auth.models import AbstractUser
-from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.conf import settings
 from django.db import models
 
-from .validators import validate_forbidden_username
 
-
-class UserDetail(AbstractUser):
+class User(AbstractUser):
     """
     Custom user model with extended profile information and avatar support.
     """
-    username = models.CharField(
-        max_length=settings.USER_NAME_MAX_LENGTH,
-        unique=True,
-        validators=[
-            UnicodeUsernameValidator(),
-            validate_forbidden_username
-        ],
-        verbose_name='Имя пользователя'
-    )
     email = models.EmailField(
         max_length=settings.USER_EMAIL_MAX_LENGTH,
         unique=True,
-        blank=False,
         verbose_name='Электронная почта'
     )
     first_name = models.CharField(
         max_length=settings.USER_FIRST_NAME_MAX_LENGTH,
-        blank=False,
         verbose_name='Имя'
     )
     last_name = models.CharField(
         max_length=settings.USER_LAST_NAME_MAX_LENGTH,
-        blank=False,
         verbose_name='Фамилия'
     )
     avatar = models.ImageField(
@@ -42,10 +27,21 @@ class UserDetail(AbstractUser):
         verbose_name='Аватар'
     )
 
+    USERNAME_FIELD = 'email'
+
+    REQUIRED_FIELDS = (
+        'username',
+        'first_name',
+        'last_name'
+    )
+
     class Meta:
         verbose_name = 'Пользователь'
         verbose_name_plural = 'Пользователи'
         ordering = ('username',)
+
+    def __str__(self):
+        return self.username
 
 
 class Subscription(models.Model):

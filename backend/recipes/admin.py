@@ -7,13 +7,27 @@ from .models import (
     RecipeIngredient,
     FavoriteRecipe,
     ShoppingCart,
-    ShortLink
 )
+
+
+class RecipeIngredientInline(admin.TabularInline):
+    """Inline admin for RecipeIngredient model."""
+    model = RecipeIngredient
+    min_num = 1
+
+
+class RecipeAdmin(admin.ModelAdmin):
+    """Admin configuration for Recipe model."""
+
+    inlines = [
+        RecipeIngredientInline,
+    ]
+    filter_horizontal = ('tags',)
+
 
 admin.site.register(Ingredient)
 admin.site.register(Tag)
-admin.site.register(Recipe)
+admin.site.register(Recipe, RecipeAdmin)
 admin.site.register(RecipeIngredient)
 admin.site.register(FavoriteRecipe)
 admin.site.register(ShoppingCart)
-admin.site.register(ShortLink)

@@ -8,6 +8,10 @@ BASE_URL = os.environ.get('BASE_URL', )
 SECRET_KEY = os.environ.get('SECRET_KEY', get_random_secret_key())
 DEBUG = os.environ.get('DJANGO_DEBUG_ENABLED', False) == 'True'
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+STATIC_URL = '/static/'
+STATIC_ROOT = '/backend_static/static/'
+MEDIA_URL = '/media/'
+MEDIA_ROOT = '/media/'
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -91,38 +95,39 @@ USE_L10N = True
 
 USE_TZ = True
 
-STATIC_URL = '/static/'
-STATIC_ROOT = '/backend_static/static/'
-MEDIA_URL = '/media/'
-MEDIA_ROOT = '/media/'
-
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework.authentication.TokenAuthentication',
     ),
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 10,
+    'DEFAULT_PAGINATION_CLASS': 'api.pagination.CustomPagination',
 }
-AUTH_USER_MODEL = 'users.UserDetail'
+CUSTOM_PAGINATION_PAGE_LIMIT = 10
+AUTH_USER_MODEL = 'users.User'
 DJOSER = {
     'LOGIN_FIELD': 'email',
+    'HIDE_USERS': False,
+    'PERMISSIONS': {
+        "user_list": ["rest_framework.permissions.AllowAny"],
+    },
+    'SERIALIZERS': {
+        'user': 'users.serializers.CustomUserSerializer',
+        'current_user': 'users.serializers.CustomUserSerializer',
+
+    },
 }
 
 # Users settings
-USER_NAME_MAX_LENGTH = 150
 USER_EMAIL_MAX_LENGTH = 254
 USER_FIRST_NAME_MAX_LENGTH = 150
 USER_LAST_NAME_MAX_LENGTH = 150
 
-FORBIDDEN_USERNAMES = (
-    'me',
-)
-
 # Ingredients settings
-INGREDIENTS_NAME_MAX_LENGTH = 128
-INGREDIENTS_MEASUREMENT_UNIT_MAX_LENGTH = 64
+INGREDIENT_NAME_MAX_LENGTH = 128
+INGREDIENT_MEASUREMENT_UNIT_MAX_LENGTH = 64
+INGREDIENT_MIN_AMOUNT = 1
+INGREDIENT_MAX_AMOUNT = 32000
 
 # Tag settings
 TAG_NAME_MAX_LENGTH = 32
@@ -130,8 +135,8 @@ TAG_SLUG_MAX_LENGTH = 32
 
 # Recipe settings
 RECIPE_NAME_MAX_LENGTH = 256
-RECIPE_TEXT_MAX_LENGTH = 256
 RECIPE_MIN_COOKING_TIME = 1  # in minutes
+RECIPE_MAX_COOKING_TIME = 32000  # in minutes
 
 # Recipe shortlink settings
 SHORTLINK_SIZE = 8
