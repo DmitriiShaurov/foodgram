@@ -64,9 +64,40 @@ docker compose -f docker-compose.production.yml exec backend python manage.py mi
 docker compose -f docker-compose.production.yml exec backend python manage.py collectstatic --no-input
 ```
 
+5. Add ingredients
+
+```shell
+docker compose -f docker-compose.production.yml exec backend python manage.py importcsv
+```
+
+6. Make sure that API works
+
+```shell
+curl -X GET "https://YOUR_DOMAIN/api/ingredients/?name=мука" -H "Accept: application/json" | jq .
+
+[
+  {
+    "id": 1081,
+    "name": "мука",
+    "measurement_unit": "г"
+  },
+  {
+    "id": 1082,
+    "name": "мука 1 сорт",
+    "measurement_unit": "г"
+  },
+  {
+    "id": 1083,
+    "name": "мука 2 сорт",
+    "measurement_unit": "г"
+  },
+...
+]
+```
+
 ### API Documentation
 
-You can find the OpenAPI schema in `docs/openapi-schema.yml`.
+You can find the OpenAPI schema in `docs/openapi-schema.yml`. API documentation is available at `/api/docs/`
 
 ### Testing
 
