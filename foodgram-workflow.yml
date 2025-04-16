@@ -87,6 +87,10 @@ jobs:
     steps:
     - name: Checkout repo
       uses: actions/checkout@v3
+    - name: Set permissions
+      run: |
+        chmod -R 755 ./docs
+        chmod -R 755 ./data
     - name: Copy docker-compose.production.yml via ssh
       uses: appleboy/scp-action@master
       with:
@@ -94,7 +98,7 @@ jobs:
         username: ${{ secrets.USER }}
         key: ${{ secrets.SSH_KEY }}
         passphrase: ${{ secrets.SSH_PASSPHRASE }}
-        source: "docker-compose.production.yml,docs/openapi-schema.yml,docs/redoc.html,data/ingredients.csv"
+        source: "docker-compose.production.yml,docs/**,data/**"
         target: "foodgram_final"
     - name: Executing remote ssh commands to deploy
       uses: appleboy/ssh-action@master
